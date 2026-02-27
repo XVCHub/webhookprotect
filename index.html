@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Webhook Protect</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #08111f; color: #b8cce8;
+    font-family: 'Inter', sans-serif; min-height: 100vh;
+    display: flex; align-items: center; justify-content: center; padding: 40px 16px;
+  }
+  .wrap { width: 100%; max-width: 540px; }
+  .header { margin-bottom: 24px; }
+  .header h1 { font-size: 20px; font-weight: 600; color: #dde8ff; }
+  .header p { font-size: 13px; color: #2d4d75; margin-top: 4px; }
+  .card { background: #0c1a30; border: 1px solid #132340; border-radius: 10px; padding: 20px; margin-bottom: 10px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+  .field label { display: block; font-size: 11px; font-weight: 500; color: #2d5080; text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 6px; }
+  input[type="text"] {
+    width: 100%; background: #07101d; border: 1px solid #132340; border-radius: 7px;
+    color: #b8cce8; font-family: 'Inter', sans-serif; font-size: 13px;
+    padding: 10px 12px; outline: none; transition: border-color 0.15s;
+  }
+  input[type="text"]:focus { border-color: #1f4fa0; }
+  input::placeholder { color: #1a3050; }
+  #output { color: #4a9eff; }
+  .btn-row { display: flex; gap: 8px; }
+  .btn {
+    flex: 1; background: #0f3080; color: #c5d8ff; font-family: 'Inter', sans-serif;
+    font-weight: 500; font-size: 13px; border: 1px solid #1a4299; border-radius: 7px;
+    padding: 10px; cursor: pointer; transition: background 0.15s;
+  }
+  .btn:hover { background: #1540a8; }
+  .btn:disabled { opacity: 0.5; cursor: default; }
+  .btn.sec { background: transparent; color: #2d5080; border-color: #132340; }
+  .btn.sec:hover { color: #b8cce8; border-color: #1f3d6a; }
+  .msg { font-size: 11px; margin-top: 5px; display: none; }
+  .msg.show { display: block; }
+  .msg.err { color: #c84040; }
+  .msg.ok { color: #40a060; }
+  .slabel { font-size: 11px; font-weight: 500; color: #2d4d6a; text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 14px; }
+  .tr { display: flex; align-items: center; padding: 10px 0; border-bottom: 1px solid #0e1e33; }
+  .tr:last-of-type { border-bottom: none; }
+  .tl { flex: 1; }
+  .tl .nm { font-size: 13px; color: #b8cce8; font-weight: 500; }
+  .tl .ds { font-size: 11px; color: #2d4d6a; margin-top: 1px; }
+  .pill { font-size: 10px; font-weight: 600; letter-spacing: 0.4px; padding: 2px 7px; border-radius: 4px; margin-right: 12px; min-width: 52px; text-align: center; }
+  .blocked { background: rgba(180,40,40,0.12); color: #b84040; }
+  .allowed { background: rgba(40,160,80,0.10); color: #40a060; }
+  .sw { position: relative; width: 38px; height: 20px; flex-shrink: 0; }
+  .sw input { display: none; }
+  .sw label { display: block; width: 38px; height: 20px; background: #0e1e33; border: 1px solid #132340; border-radius: 10px; cursor: pointer; transition: all 0.2s; }
+  .sw label::after { content: ''; position: absolute; width: 12px; height: 12px; background: #1a3a60; border-radius: 50%; top: 3px; left: 3px; transition: all 0.2s; }
+  .sw input:checked + label { background: #0a2a14; border-color: #1a5030; }
+  .sw input:checked + label::after { transform: translateX(18px); background: #40a060; }
+  #prefixWrap { display: none; margin-top: 10px; }
+  #prefixWrap.show { display: block; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <h1>Webhook Protect</h1>
+    <p>hide your discord webhook behind a protected proxy url</p>
+  </div>
+  <div class="card">
+    <div class="row">
+      <div class="field">
+        <label>Webhook URL</label>
+        <input type="text" id="input" placeholder="https://discord.com/api/webhooks/..." />
+        <p class="msg err" id="err">invalid webhook url</p>
+      </div>
+      <div class="field">
+        <label>Protected URL</label>
+        <input type="text" id="output" readonly placeholder="generated url..." />
+        <p class="msg ok" id="copied">copied!</p>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn" id="genBtn" onclick="generate()">Generate</button>
+      <button class="btn sec" onclick="copy()">Copy URL</button>
+    </div>
+  </div>
+  <div class="card">
+    <p class="slabel">Protection Settings</p>
+    <div id="toggles"></div>
+    <div class="tr" style="border-bottom:none;padding-bottom:0">
+      <div class="tl">
+        <div class="nm">Require Prefix</div>
+        <div class="ds">block requests missing a specific string</div>
+      </div>
+      <div class="sw"><input type="checkbox" id="tP"><label for="tP"></label></div>
+    </div>
+    <div id="prefixWrap">
+      <input type="text" id="pV" placeholder="e.g. Server Join Script:" style="font-size:12px" />
+    </div>
+  </div>
+</div>
+<script>
+const DEFS = [
+  { id: "bE", nm: "@everyone",          ds: "block @everyone in request body",  def: true  },
+  { id: "bH", nm: "@here",              ds: "block @here in request body",      def: true  },
+  { id: "bM", nm: "User/Role Mentions", ds: "block <@id> and <@&id> tags",      def: true  },
+  { id: "bA", nm: "@ Symbol",           ds: "block any @ character",            def: false },
+  { id: "bD", nm: "Discord Keyword",    ds: "block discord word in body",       def: false },
+];
+const cont = document.getElementById("toggles");
+DEFS.forEach(t => {
+  const row = document.createElement("div");
+  row.className = "tr";
+  const pill = document.createElement("span");
+  pill.id = "p_" + t.id;
+  pill.className = "pill " + (t.def ? "blocked" : "allowed");
+  pill.textContent = t.def ? "BLOCKED" : "ALLOWED";
+  const sw = document.createElement("div");
+  sw.className = "sw";
+  sw.innerHTML = '<input type="checkbox" id="' + t.id + '"' + (t.def ? " checked" : "") + '><label for="' + t.id + '"></label>';
+  row.innerHTML = '<div class="tl"><div class="nm">' + t.nm + '</div><div class="ds">' + t.ds + '</div></div>';
+  row.appendChild(pill);
+  row.appendChild(sw);
+  cont.appendChild(row);
+  sw.querySelector("input").addEventListener("change", e => {
+    pill.className = "pill " + (e.target.checked ? "blocked" : "allowed");
+    pill.textContent = e.target.checked ? "BLOCKED" : "ALLOWED";
+  });
+});
+document.getElementById("tP").addEventListener("change", e => {
+  document.getElementById("prefixWrap").className = e.target.checked ? "show" : "";
+});
+const getCfg = () => ({
+  bE: document.getElementById("bE").checked,
+  bH: document.getElementById("bH").checked,
+  bM: document.getElementById("bM").checked,
+  bA: document.getElementById("bA").checked,
+  bD: document.getElementById("bD").checked,
+  rP: document.getElementById("tP").checked,
+  pV: document.getElementById("pV").value.trim(),
+});
+const generate = async () => {
+  const url = document.getElementById("input").value.trim();
+  const err = document.getElementById("err");
+  if (!url.startsWith("https://discord.com/api/webhooks/")) {
+    err.classList.add("show");
+    document.getElementById("output").value = "";
+    return;
+  }
+  err.classList.remove("show");
+  const btn = document.getElementById("genBtn");
+  btn.disabled = true;
+  btn.textContent = "generating...";
+  try {
+    const res = await fetch("/api/create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ u: url, c: getCfg() })
+    });
+    const data = await res.json();
+    if (data.token) {
+      document.getElementById("output").value = location.origin + "/webhook/" + data.token;
+    } else {
+      err.textContent = data.error || "failed";
+      err.classList.add("show");
+    }
+  } catch {
+    err.textContent = "request failed";
+    err.classList.add("show");
+  }
+  btn.disabled = false;
+  btn.textContent = "Generate";
+};
+const copy = () => {
+  const v = document.getElementById("output").value;
+  if (!v) return;
+  navigator.clipboard.writeText(v).then(() => {
+    const c = document.getElementById("copied");
+    c.classList.add("show");
+    setTimeout(() => c.classList.remove("show"), 1500);
+  });
+};
+</script>
+</body>
+</html>
