@@ -143,6 +143,7 @@ const generate = async () => {
   const url = document.getElementById("input").value.trim();
   const err = document.getElementById("err");
   if (!url.startsWith("https://discord.com/api/webhooks/")) {
+    err.textContent = "invalid webhook url";
     err.classList.add("show");
     document.getElementById("output").value = "";
     return;
@@ -150,7 +151,7 @@ const generate = async () => {
   err.classList.remove("show");
   const btn = document.getElementById("genBtn");
   btn.disabled = true;
-  btn.textContent = "generating...";
+  btn.textContent = "verifying...";
   try {
     const res = await fetch("/api/create", {
       method: "POST",
