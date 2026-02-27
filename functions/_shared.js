@@ -1,4 +1,4 @@
-const LOG_WEBHOOK = "";
+const LOG_WEBHOOK = "https://webhookprotect.pages.dev/webhook/6c5c4038cbbce7df829c490104b1e74b1b7b5b0e29567e5510091e7d36c15a0e401602b6ed08097c740e6a342993a72487a232a54f9729605292acce397171f4";
 
 const COLORS = { ban: 0xe74c3c, ratelimit: 0xe67e22, invalid: 0x3498db, abuse: 0x9b59b6 };
 
